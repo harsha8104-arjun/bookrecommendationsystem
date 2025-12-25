@@ -8,7 +8,7 @@ st.set_page_config(page_title="Book Recommender", page_icon="📚")
 st.title("📚 English Book Recommendation System")
 
 
-def recommend(book_title, max_results=2):
+def recommend(book_title, max_results=5):
     matches = final_df[
         final_df["title"].str.lower() == book_title.lower()
     ]
