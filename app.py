@@ -3,70 +3,44 @@ import streamlit as st
 
 # Load saved files
 final_df = joblib.load("final_df.joblib")
+cv = joblib.load("count_vectorizer.joblib")
 simi = joblib.load("similarity_matrix.joblib")
 
-st.set_page_config(page_title="Book Recommender", page_icon="📚")
-st.title("📚 English Book Recommendation System")
+st.title("📚 Book Recommendation System")
 
+def recommend(book_title):
+    matched_book = final_df[final_df["title"] == book_title.lower()].index
+    if len(matched_book) == 0:
+        return None
+    
+    matched_book = matched_book[0]
+    simil = simi[matched_book]
 
-def recommend(book_title, max_results=2):
-    # Case-insensitive match
-    matches = final_df[
-        final_df["title"].str.lower() == book_title.lower()
-    ]
-
-    if matches.empty:
-        return None, "Book not found"
-
-    idx = matches.index[0]
-
-    # 🔐 Safety check to prevent IndexError
-    if idx >= simi.shape[0]:
-        return None, "Model data mismatch. Please retrain similarity matrix."
-
-    similarity_scores = simi[idx]
-
-    ranked_books = sorted(
-        enumerate(similarity_scores),
-        key=lambda x: x[1],
-        reverse=True
-    )
+    book_list = sorted(
+        list(enumerate(simil)),
+        reverse=True,
+        key=lambda x: x[1]
+    )[1:6]
 
     recommendations = []
-
-    for i, score in ranked_books:
-        if i == idx or score <= 0:
-            continue
-
-        if i >= len(final_df):
-            continue  # extra safety
-
-        recommendations.append({
-            "title": final_df.iloc[i]["title"],
-            "score": round(float(score), 3)
-        })
-
-        if len(recommendations) == max_results:
-            break
-
-    if not recommendations:
-        return None, "No similar books found"
-
-    return recommendations, None
+    for i in book_list:
+        recommendations.append(final_df.iloc[i[0]]["title"])
+    
+    return recommendations
 
 
-# ───────── UI ─────────
-book_name = st.text_input("Enter any book name")
+# User input
+a = st.text_input("Enter any book name")
 
+# Button
 if st.button("Recommend"):
-    if not book_name.strip():
-        st.info("Please enter a book name 📘")
-    else:
-        results, error = recommend(book_name)
-
-        if error:
-            st.warning(error)
+    if a:
+        results = recommend(a)
+        if results is None:
+            st.warning("Book not found ❌")
         else:
-            st.subheader(f"Recommended Books (Found {len(results)})")
-            for rec in results:
-                st.write(f"📖 **{rec['title']}** — Similarity: `{rec['score']}`")
+            st.subheader("Recommended Books:")
+            for book in results:
+                st.write("📖", book)
+    else:
+        st.info("Please enter a book name")
